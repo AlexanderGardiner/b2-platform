@@ -154,6 +154,36 @@ def test_chat_loads_and_saves_stateful_history(monkeypatch) -> None:
     }
 
 
+def test_chat_threads_debug_events_into_session_context(monkeypatch) -> None:
+    debug_events = []
+    captured = {}
+
+    class FakeRouter:
+        def route_with_metadata(self, query: str):
+            return object(), {"score": 1.0}
+
+    class FakeSession:
+        def __init__(self, agent: object, history=None, deps=None):
+            captured["deps"] = deps
+            self.history = []
+
+        def send_stream(self, prompt: str):
+            yield "ok"
+
+    monkeypatch.setattr(chat_module, "load_dotenv", lambda: None)
+    monkeypatch.setattr(chat_module, "_router", None)
+    monkeypatch.setattr(chat_module, "AgentRouter", FakeRouter)
+    monkeypatch.setattr(chat_module, "Session", FakeSession)
+    monkeypatch.setattr(
+        chat_module,
+        "FirestoreSessionStore",
+        lambda: (_ for _ in ()).throw(AssertionError("store should not be used")),
+    )
+
+    assert chat(text="hello", debug_events=debug_events) == "ok"
+    assert captured["deps"].debug_events is debug_events
+
+
 def test_render_history_text_flattens_user_and_assistant_turns() -> None:
     history = [
         ModelRequest(parts=[UserPromptPart(content="my mother passed away")]),

@@ -22,9 +22,14 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="b2 WhatsApp Adapter")
 
 _WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
+_ENABLE_E2E_DEBUG = os.getenv("ENABLE_E2E_DEBUG", "")
 
 # WhatsApp media message types that carry a downloadable media ID.
 _MEDIA_TYPES = ("image", "document")
+
+
+def _truthy(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 @dataclass
@@ -35,6 +40,20 @@ class InboundMessage:
     text: str | None = None
     media_id: str | None = None
     mime_type: str | None = None
+
+
+def _debug_response(
+    response: str | None,
+    message: InboundMessage,
+    debug_events: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "response": response,
+        "debug": {
+            "session_id": message.wa_id,
+            "tool_results": debug_events,
+        },
+    }
 
 
 def _extract_message(payload: dict[str, Any]) -> InboundMessage:
@@ -78,7 +97,8 @@ def _extract_message(payload: dict[str, Any]) -> InboundMessage:
 async def message_endpoint(
     request: Request,
     x_webhook_secret: str | None = Header(default=None),
-) -> dict[str, str | None]:
+    x_e2e_debug: str | None = Header(default=None),
+) -> dict[str, Any]:
     if _WEBHOOK_SECRET and x_webhook_secret != _WEBHOOK_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -86,11 +106,20 @@ async def message_endpoint(
     logger.info("api.message received object=%s", payload.get("object"))
 
     message = _extract_message(payload)
+    debug_enabled = _truthy(_ENABLE_E2E_DEBUG) and _truthy(x_e2e_debug)
+    debug_events: list[dict[str, Any]] | None = [] if debug_enabled else None
 
     if message.text is not None:
         logger.info("api.message routing text wa_id=%s chars=%d", message.wa_id, len(message.text))
-        response = await run_in_threadpool(chat, text=message.text, session_id=message.wa_id)
+        response = await run_in_threadpool(
+            chat,
+            text=message.text,
+            session_id=message.wa_id,
+            debug_events=debug_events,
+        )
         logger.info("api.message done wa_id=%s response_chars=%d", message.wa_id, len(response))
+        if debug_enabled:
+            return _debug_response(response, message, debug_events or [])
         return {"response": response}
 
     if message.media_id is not None:
@@ -98,6 +127,8 @@ async def message_endpoint(
         media = await download_media(message.media_id)
         if media is None:
             logger.info("api.message skipped — media download unavailable")
+            if debug_enabled:
+                return _debug_response(None, message, debug_events or [])
             return {"response": None}
         image_bytes, mime_type = media
         response = await run_in_threadpool(
@@ -105,11 +136,16 @@ async def message_endpoint(
             image_bytes=image_bytes,
             image_media_type=mime_type,
             session_id=message.wa_id,
+            debug_events=debug_events,
         )
         logger.info("api.message done wa_id=%s response_chars=%d", message.wa_id, len(response))
+        if debug_enabled:
+            return _debug_response(response, message, debug_events or [])
         return {"response": response}
 
     logger.info("api.message skipped — no actionable payload")
+    if debug_enabled:
+        return _debug_response(None, message, debug_events or [])
     return {"response": None}
 
 

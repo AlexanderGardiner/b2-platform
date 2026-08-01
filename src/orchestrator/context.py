@@ -20,3 +20,4 @@ class SessionContext:
     session_id: str | None = None
     store: Any | None = None          # FirestoreSessionStore (history + media)
     history_text: str = ""            # rendered prior conversation, used as narrative
+    debug_events: list[dict[str, Any]] | None = None

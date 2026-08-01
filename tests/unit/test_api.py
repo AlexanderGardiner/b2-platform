@@ -252,6 +252,74 @@ def test_message_text_calls_chat(monkeypatch):
     assert captured["session_id"] == "16508106640"
 
 
+def test_message_text_debug_requires_env_and_header(monkeypatch):
+    import src.api as api_module
+    monkeypatch.setattr(api_module, "_WEBHOOK_SECRET", "")
+    monkeypatch.setattr(api_module, "_ENABLE_E2E_DEBUG", "true")
+
+    captured = {}
+
+    def fake_chat(*, text, session_id, debug_events=None, **kwargs):
+        captured["debug_events"] = debug_events
+        return "ok"
+
+    monkeypatch.setattr(api_module, "chat", fake_chat)
+
+    client = TestClient(api_module.app)
+    r = client.post("/message", json=SAMPLE_TEXT_PAYLOAD)
+    assert r.status_code == 200
+    assert r.json() == {"response": "ok"}
+    assert captured["debug_events"] is None
+
+
+def test_message_text_debug_returns_tool_results(monkeypatch):
+    import src.api as api_module
+    monkeypatch.setattr(api_module, "_WEBHOOK_SECRET", "")
+    monkeypatch.setattr(api_module, "_ENABLE_E2E_DEBUG", "yes")
+
+    def fake_chat(*, text, session_id, debug_events=None, **kwargs):
+        assert debug_events == []
+        debug_events.append(
+            {
+                "tool": "death_certificate_verification",
+                "status": "verified",
+                "score": 91,
+                "band": "high",
+                "accepted": True,
+                "handed_off": True,
+                "flags": [],
+                "extracted_fields": {"full_name": "Jane Doe"},
+                "summary": "Verification passed.",
+            }
+        )
+        return "ok"
+
+    monkeypatch.setattr(api_module, "chat", fake_chat)
+
+    client = TestClient(api_module.app)
+    r = client.post("/message", json=SAMPLE_TEXT_PAYLOAD, headers={"X-E2E-Debug": "true"})
+    assert r.status_code == 200
+    assert r.json() == {
+        "response": "ok",
+        "debug": {
+            "session_id": "16508106640",
+            "tool_results": [
+                {
+                    "tool": "death_certificate_verification",
+                    "status": "verified",
+                    "score": 91,
+                    "band": "high",
+                    "accepted": True,
+                    "handed_off": True,
+                    "flags": [],
+                    "extracted_fields": {"full_name": "Jane Doe"},
+                    "summary": "Verification passed.",
+                }
+            ],
+        },
+    }
+
+
 # ---------------------------------------------------------------------------
 # /message — secret header enforcement
 # ---------------------------------------------------------------------------
