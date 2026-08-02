@@ -15,9 +15,14 @@ class FakeStore:
         return self._media
 
 
-def _ctx(store, history_text="my mother Jane Doe passed away", session_id="wa-123"):
+def _ctx(store, history_text="my mother Jane Doe passed away", session_id="wa-123", debug_events=None):
     return SimpleNamespace(
-        deps=SimpleNamespace(session_id=session_id, store=store, history_text=history_text)
+        deps=SimpleNamespace(
+            session_id=session_id,
+            store=store,
+            history_text=history_text,
+            debug_events=debug_events,
+        )
     )
 
 
@@ -89,3 +94,34 @@ async def test_verify_reports_no_document_when_store_empty(monkeypatch):
 
     assert result["status"] == "no_document"
     assert result["handed_off"] is False
+
+
+async def test_verify_appends_debug_event(monkeypatch):
+    async def fake_pipeline(submission):
+        return _result(Band.MEDIUM)
+
+    async def fake_deliver(payload):
+        return False
+
+    monkeypatch.setattr(verify_module, "run_pipeline", fake_pipeline)
+    monkeypatch.setattr(verify_module, "deliver_to_gl", fake_deliver)
+
+    debug_events = []
+    result = await verify_death_certificate(
+        _ctx(FakeStore((b"\xff\xd8jpeg", "image/jpeg")), debug_events=debug_events)
+    )
+
+    assert result["status"] == "verified"
+    assert debug_events == [
+        {
+            "tool": "death_certificate_verification",
+            "status": "verified",
+            "score": 80,
+            "band": "medium",
+            "accepted": True,
+            "handed_off": False,
+            "flags": [],
+            "extracted_fields": {"full_name": "Jane Doe"},
+            "summary": result["summary"],
+        }
+    ]

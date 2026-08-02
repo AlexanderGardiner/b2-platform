@@ -40,6 +40,25 @@ def _accepted(result: ReliabilityResult) -> bool:
     return result.band in _ACCEPT_BANDS and "HARD_ESCALATION" not in result.flags
 
 
+def _append_debug_event(deps: Any, payload: dict[str, Any], accepted: bool | None) -> None:
+    debug_events = getattr(deps, "debug_events", None)
+    if debug_events is None:
+        return
+    debug_events.append(
+        {
+            "tool": "death_certificate_verification",
+            "status": payload.get("status"),
+            "score": payload.get("score"),
+            "band": payload.get("band"),
+            "accepted": accepted,
+            "handed_off": bool(payload.get("handed_off", False)),
+            "flags": list(payload.get("flags", [])),
+            "extracted_fields": dict(payload.get("extracted_fields", {})),
+            "summary": str(payload.get("summary", "")),
+        }
+    )
+
+
 async def verify_death_certificate(ctx: Any) -> dict[str, Any]:
     """Verify the user's most recent document and hand off to GiveLight if it passes."""
     deps = getattr(ctx, "deps", None)
@@ -49,11 +68,13 @@ async def verify_death_certificate(ctx: Any) -> dict[str, Any]:
     media = store.load_latest_media(session_id) if (store is not None and session_id) else None
     if media is None:
         logger.info("verify.no_media session=%.8s", str(session_id or ""))
-        return {
+        payload = {
             "status": "no_document",
             "handed_off": False,
             "summary": "No document has been received yet — ask the user to send a photo or PDF of the death certificate.",
         }
+        _append_debug_event(deps, payload, accepted=None)
+        return payload
 
     image_bytes, _mime = media
     narrative = (getattr(deps, "history_text", "") or "").strip() or _NARRATIVE_FALLBACK
@@ -67,7 +88,8 @@ async def verify_death_certificate(ctx: Any) -> dict[str, Any]:
     result = await run_pipeline(submission)
     handed_off = False
 
-    if _accepted(result):
+    accepted = _accepted(result)
+    if accepted:
         payload = build_handoff_payload(
             result,
             contact_identifier=_contact_identifier(session_id),
@@ -80,11 +102,11 @@ async def verify_death_certificate(ctx: Any) -> dict[str, Any]:
         str(session_id or ""),
         result.score,
         result.band.value,
-        _accepted(result),
+        accepted,
         handed_off,
     )
 
-    return {
+    payload = {
         "status": "verified",
         "score": result.score,
         "band": result.band.value,
@@ -98,3 +120,5 @@ async def verify_death_certificate(ctx: Any) -> dict[str, Any]:
             "Consider asking the user for a clearer photo of the full certificate."
         ),
     }
+    _append_debug_event(deps, payload, accepted=accepted)
+    return payload

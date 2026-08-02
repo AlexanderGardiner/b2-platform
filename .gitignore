@@ -15,6 +15,7 @@ docs/
 
 # GCP credentials
 *.json
+!e2e_cases/**/*.json
 service-account*.json
 
 # IDE
@@ -27,6 +28,7 @@ Thumbs.db
 
 # Logs
 *.log
+e2e_runs/
 
 *.sqlite3
 
@@ -41,4 +43,3 @@ dummy/
 tools/fake_image_detector/local_samples/
 tools/fake_image_detector/models/
 tests/fixtures/dataset/
-

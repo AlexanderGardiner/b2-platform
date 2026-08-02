@@ -1,0 +1,5 @@
+{
+  "expected_outcome": "accept",
+  "http_status": 200,
+  "min_response_chars": 1
+}
