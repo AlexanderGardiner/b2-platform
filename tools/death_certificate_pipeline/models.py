@@ -118,3 +118,8 @@ class ReliabilityResult(BaseModel):
     flags: list[str] = Field(default_factory=list)
     justification: str
     extracted_fields: dict[str, Any] = Field(default_factory=dict)
+    # Required by WhatsApp full-pipeline tests to report why the claimant
+    # narrative matched, conflicted with, or could not be compared to the image.
+    matches: list[str] = Field(default_factory=list)
+    mismatches: list[str] = Field(default_factory=list)
+    uncertain_points: list[str] = Field(default_factory=list)

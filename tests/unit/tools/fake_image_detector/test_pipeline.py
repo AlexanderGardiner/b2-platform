@@ -47,7 +47,11 @@ def _failing(check_id: str) -> CheckResult:
 
 
 def test_unknown_input_type_flags_immediately():
+    async def classify_unknown(image_bytes):
+        return "unknown"
+
     p = _pipeline([(_cfg("exif"), _StubCheck(_passing("exif")))])
+    p._classify_input_type = classify_unknown
     result = run(p.run(b"img", {"input_type": "unknown"}))
     assert result.verdict == Verdict.FLAG
     assert result.escalation == Escalation.HUMAN_REVIEW

@@ -88,9 +88,16 @@ async def verify_death_certificate(ctx: Any) -> dict[str, Any]:
         "status": "verified",
         "score": result.score,
         "band": result.band.value,
+        # Required by tests/unit/test_whatsapp_dc_scenarios.py so webhook/tool
+        # responses expose the score breakdown and consistency evidence.
+        "sub_scores": result.sub_scores,
         "handed_off": handed_off,
         "flags": result.flags,
         "extracted_fields": result.extracted_fields,
+        "justification": result.justification,
+        "matches": getattr(result, "matches", []),
+        "mismatches": getattr(result, "mismatches", []),
+        "uncertain_points": getattr(result, "uncertain_points", []),
         "summary": (
             "Verification passed and the case was forwarded to GiveLight."
             if handed_off

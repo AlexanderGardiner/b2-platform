@@ -453,8 +453,7 @@ b2-platform/
 │   ├── rag/
 │   └── web_search/
 ├── tests/
-├── scripts/
-│   └── deploy.sh
+│   └── scripts/
 ├── Dockerfile
 ├── requirements.txt
 ├── CONTRIBUTING.md
