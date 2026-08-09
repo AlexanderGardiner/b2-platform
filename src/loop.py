@@ -2,6 +2,7 @@ import logging
 
 from .router import AgentRouter, BelowThresholdError
 from .session import Session
+from tools import summary_tool
 
 
 def chat_loop() -> None:
@@ -23,6 +24,8 @@ def chat_loop() -> None:
 			continue
 
 		if query.lower() in {"exit", "quit"}:
+			return_message = summary_tool.handle(active_session._history)
+			print("Agent: " + return_message)
 			print("Goodbye.")
 			break
 
@@ -42,6 +45,9 @@ def chat_loop() -> None:
 				continue
 			active_session = Session(agent)
 			print(f"Routed to agent: {agent.name} (score={metadata['score']:.3f})")
+
+
+
 
 		print("Agent: ", end="", flush=True)
 		for chunk in active_session.send_stream(query):
