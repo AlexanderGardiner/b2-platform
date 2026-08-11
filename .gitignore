@@ -43,3 +43,18 @@ dummy/
 tools/fake_image_detector/local_samples/
 tools/fake_image_detector/models/
 tests/fixtures/dataset/
+
+# Docker
+Dockerfile
+Dockerfile*
+Docker*
+
+
+# Scripts
+run_live_gemini_test_plan*
+
+# Death Certificates
+tests/test_dc/*
+!tests/test_dc/README.md
+
+

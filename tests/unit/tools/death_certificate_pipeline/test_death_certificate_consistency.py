@@ -81,6 +81,14 @@ def test_scores_clamped_between_0_and_1(mock_gemini):
     assert 0.0 <= result["confidence"] <= 1.0
 
 
+def test_uses_ga_gemini_default_model(mock_gemini):
+    result = analyze_death_certificate_consistency(CHAT_HISTORY, FAKE_IMAGE)
+
+    assert result["model"] == "gemini-2.5-flash"
+    mock_gemini.models.generate_content.assert_called_once()
+    assert mock_gemini.models.generate_content.call_args.kwargs["model"] == "gemini-2.5-flash"
+
+
 def test_empty_chat_history_raises(mock_gemini):
     with pytest.raises(ValueError, match="chat_history"):
         analyze_death_certificate_consistency([], FAKE_IMAGE)
@@ -93,5 +101,7 @@ def test_empty_image_raises(mock_gemini):
 
 def test_missing_api_key_raises(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
     with pytest.raises(ValueError, match="GEMINI_API_KEY"):
         analyze_death_certificate_consistency(CHAT_HISTORY, FAKE_IMAGE)

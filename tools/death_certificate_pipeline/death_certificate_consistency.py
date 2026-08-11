@@ -198,7 +198,9 @@ def analyze_death_certificate_consistency(
             "(or set GOOGLE_CLOUD_PROJECT for Vertex AI)"
         )
 
-    gemini_model = model or os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+    # Required by tests/unit/tools/death_certificate_pipeline/test_death_certificate_consistency.py
+    # so the default model used by live OCR/vision checks is explicit and asserted.
+    gemini_model = model or os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
     genai, gentypes = _load_gemini_client()
     if vertex_project:

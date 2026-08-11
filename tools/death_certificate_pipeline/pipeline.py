@@ -246,6 +246,11 @@ async def _stage_score(
         flags=flags,
         justification=justification,
         extracted_fields=con.extracted_fields,
+        # Required by tests/unit/test_whatsapp_dc_scenarios.py and the live
+        # Gemini webhook eval so consistency evidence survives final scoring.
+        matches=con.matches,
+        mismatches=con.contradictions,
+        uncertain_points=con.uncertain_points,
     )
 
 
