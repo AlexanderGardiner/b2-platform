@@ -1,0 +1,13 @@
+# tools/summary_tool.yaml
+name: summary_tool
+description: "Tool for a complete summary of the user's conversation"
+input_schema:
+  type: object
+  properties:
+    value:
+      type: string
+      description: A tool used to summarize the conversation and pass back a brief summary to the user."
+  required: []
+implementation:
+  type: function
+  handler: tools.summary_tool.handle

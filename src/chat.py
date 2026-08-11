@@ -60,6 +60,7 @@ def chat(
     image_media_type: str = DEFAULT_IMAGE_MEDIA_TYPE,
     session_id: str | None = None,
     channel: str = "whatsapp",
+    debug_events: list[dict[str, object]] | None = None,
 ) -> str:
     """Route one WhatsApp text or image message through the agent loop and return the response."""
 
@@ -79,7 +80,12 @@ def chat(
 
     router = _get_router()
     agent, _metadata = router.route_with_metadata(route_query)
-    deps = SessionContext(session_id=session_id, store=store, history_text=history_text)
+    deps = SessionContext(
+        session_id=session_id,
+        store=store,
+        history_text=history_text,
+        debug_events=debug_events,
+    )
     session = Session(agent, history=history, deps=deps)
 
     response = "".join(session.send_stream(prompt))
