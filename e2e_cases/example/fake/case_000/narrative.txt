@@ -1,0 +1,1 @@
+Hello. This is a fictional e2e fixture from Exampleland. The claimant, Jordan Example, is submitting a fictional death certificate for their parent, Riley Sample, who passed away on 12 March 2025 in Sample City, Exampleland. This sample is non-real data for test harness structure only.

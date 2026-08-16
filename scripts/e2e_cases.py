@@ -42,6 +42,81 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def run_all(
+    cases,
+    *,
+    base_url: str,
+    secret: str,
+    timeout: float,
+    local_mode: bool,
+    debug_tools: bool,
+):
+    import httpx
+
+    from e2e.runner import run_case
+
+    results = []
+    total = len(cases)
+    with httpx.Client(timeout=timeout) as client:
+        for index, case in enumerate(cases, start=1):
+            _print_progress(index, total, case.label)
+            result = run_case(
+                client,
+                case,
+                base_url=base_url,
+                secret=secret,
+                local_mode=local_mode,
+                debug_tools=debug_tools,
+            )
+            results.append(result)
+            _clear_progress_line()
+            print(_format_realtime_result(result))
+            for error in result["errors"]:
+                print(f"  - {error}")
+    return results
+
+
+def _format_realtime_result(result: dict) -> str:
+    status = _green("PASS") if result["passed"] else _red("FAIL")
+    return (
+        f"{status} {result['case']} "
+        f"expected={result['expected_outcome']} actual={result['actual_outcome']} "
+        f"class={result['classification']} ({len(result['final_response'])} response chars)"
+    )
+
+
+def _progress_bar(done: int, total: int, width: int = 28) -> str:
+    if total <= 0:
+        return "[----------------------------] 0/0 0%"
+    filled = round(width * done / total)
+    bar = "#" * filled + "-" * (width - filled)
+    percent = round(100 * done / total)
+    return f"[{bar}] {done}/{total} {percent}%"
+
+
+def _print_progress(index: int, total: int, label: str) -> None:
+    text = f"{_progress_bar(index - 1, total)} RUNNING {index}/{total} {label}"
+    print(f"\r{text}", end="", flush=True)
+
+
+def _clear_progress_line() -> None:
+    print("\r\033[2K", end="", flush=True)
+
+
+def _green(value: str) -> str:
+    return _color(value, "32")
+
+
+def _red(value: str) -> str:
+    return _color(value, "31")
+
+
+def _color(value: str, code: str) -> str:
+    if os.getenv("NO_COLOR"):
+        return value
+    return f"\033[{code}m{value}\033[0m"
+
+
 def main() -> int:
     args = parse_args()
     cases_root = (REPO_ROOT / args.cases_root).resolve()
@@ -66,6 +141,9 @@ def main() -> int:
         local_mode=local_mode,
         debug_tools=args.debug_tools,
     )
+    print()
+    print("=" * 80)
+    print()
     for result in results:
         status = "PASS" if result["passed"] else "FAIL"
         print(
@@ -81,6 +159,9 @@ def main() -> int:
     stats = report["stats"]["overall"]
     accuracy = stats["accuracy"]
     accuracy_text = "n/a" if accuracy is None else f"{accuracy:.1%}"
+    
+    print()
+    print("=" * 80)
     print(f"\nSummary: {report['passed']}/{report['total']} passed, {failed} failed")
     print(
         "Stats: "
