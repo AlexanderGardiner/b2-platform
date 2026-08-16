@@ -44,8 +44,10 @@ def test_model_call_pulls_image_and_hands_off(monkeypatch):
             justification="ok", extracted_fields={"full_name": "Jane Doe"},
         )
 
-    async def fake_deliver(payload):
+    async def fake_deliver(payload, image_bytes, mime_type):
         seen["handoff"] = payload
+        seen["handoff_image"] = image_bytes
+        seen["handoff_mime"] = mime_type
         return True
 
     monkeypatch.setattr(verify_module, "run_pipeline", fake_pipeline)
@@ -77,6 +79,8 @@ def test_model_call_pulls_image_and_hands_off(monkeypatch):
     # and the passing result was forwarded to GiveLight
     assert seen["handoff"]["score"] == 82
     assert len(seen["handoff"]["contact_identifier"]) == 64
+    assert seen["handoff_image"] == b"\xff\xd8jpeg-image-bytes"
+    assert seen["handoff_mime"] == "image/jpeg"
 
 
 def test_orphan_claim_document_upload_returns_tool_validation_output(monkeypatch):
@@ -103,8 +107,10 @@ def test_orphan_claim_document_upload_returns_tool_validation_output(monkeypatch
             },
         )
 
-    async def fake_deliver(payload):
+    async def fake_deliver(payload, image_bytes, mime_type):
         seen["handoff"] = payload
+        seen["handoff_image"] = image_bytes
+        seen["handoff_mime"] = mime_type
         return True
 
     monkeypatch.setattr(verify_module, "run_pipeline", fake_pipeline)
@@ -145,6 +151,8 @@ def test_orphan_claim_document_upload_returns_tool_validation_output(monkeypatch
     assert handoff["extracted_fields"]["full_name"] == "Jane Doe"
     assert handoff["case_fields"]["channel"] == "whatsapp"
     assert len(handoff["contact_identifier"]) == 64
+    assert seen["handoff_image"] == b"\xff\xd8jpeg-death-certificate"
+    assert seen["handoff_mime"] == "image/jpeg"
 
     tool_output = json.loads(response_text)["death_certificate_verification"]
     assert tool_output["status"] == "verified"

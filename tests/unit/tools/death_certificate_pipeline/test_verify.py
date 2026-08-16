@@ -45,8 +45,10 @@ async def test_verify_accepts_and_hands_off(monkeypatch):
         seen["narrative"] = submission.narrative
         return _result(Band.HIGH)
 
-    async def fake_deliver(payload):
+    async def fake_deliver(payload, image_bytes, mime_type):
         seen["payload"] = payload
+        seen["handoff_image"] = image_bytes
+        seen["handoff_mime"] = mime_type
         return True
 
     monkeypatch.setattr(verify_module, "run_pipeline", fake_pipeline)
@@ -62,6 +64,8 @@ async def test_verify_accepts_and_hands_off(monkeypatch):
     # handoff payload carries a non-reversible contact id and the score
     assert seen["payload"]["score"] == 80
     assert seen["payload"]["contact_identifier"] and len(seen["payload"]["contact_identifier"]) == 64
+    assert seen["handoff_image"] == b"\xff\xd8jpeg"
+    assert seen["handoff_mime"] == "image/jpeg"
 
 
 async def test_verify_holds_back_on_hard_escalation(monkeypatch):
@@ -70,7 +74,7 @@ async def test_verify_holds_back_on_hard_escalation(monkeypatch):
     async def fake_pipeline(submission):
         return _result(Band.ESCALATE, flags=["HARD_ESCALATION"])
 
-    async def fake_deliver(payload):
+    async def fake_deliver(payload, image_bytes, mime_type):
         delivered["called"] = True
         return True
 
@@ -100,7 +104,7 @@ async def test_verify_appends_debug_event(monkeypatch):
     async def fake_pipeline(submission):
         return _result(Band.MEDIUM)
 
-    async def fake_deliver(payload):
+    async def fake_deliver(payload, image_bytes, mime_type):
         return False
 
     monkeypatch.setattr(verify_module, "run_pipeline", fake_pipeline)

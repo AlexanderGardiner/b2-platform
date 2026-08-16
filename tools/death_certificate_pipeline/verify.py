@@ -76,7 +76,7 @@ async def verify_death_certificate(ctx: Any) -> dict[str, Any]:
         _append_debug_event(deps, payload, accepted=None)
         return payload
 
-    image_bytes, _mime = media
+    image_bytes, mime_type = media
     narrative = (getattr(deps, "history_text", "") or "").strip() or _NARRATIVE_FALLBACK
 
     submission = Submission(
@@ -95,7 +95,7 @@ async def verify_death_certificate(ctx: Any) -> dict[str, Any]:
             contact_identifier=_contact_identifier(session_id),
             case_fields=submission.case_fields,
         )
-        handed_off = await deliver_to_gl(payload)
+        handed_off = await deliver_to_gl(payload, image_bytes, mime_type)
 
     logger.info(
         "verify.done session=%.8s score=%d band=%s accepted=%s handed_off=%s",
