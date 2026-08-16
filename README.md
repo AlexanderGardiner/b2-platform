@@ -462,6 +462,95 @@ b2-platform/
 
 ---
 
+## End-to-End Test Automation
+
+The e2e harness runs filesystem-driven WhatsApp `/message` cases from
+`e2e_cases/` and writes machine-readable reports under `e2e_runs/`.
+When `--kind` is omitted, the harness discovers both `real/` and `fake/` case
+folders.
+
+The automation scripts added under `tests/scripts/` wrap that harness for local
+and remote runs:
+
+```bash
+tests/scripts/run_e2e_suite.sh
+```
+
+This command:
+
+1. Creates or reuses `.venv-testplan`.
+2. Installs `requirements-api.txt`, `pytest`, and `pytest-asyncio`.
+3. Enables `ENABLE_E2E_DEBUG=true` for the local harness process.
+4. Runs `scripts/e2e_cases.py --debug-tools` locally.
+5. Finds the newest `e2e_runs/local/*/results.json`.
+6. Gates the report with `tests/scripts/check_e2e_report.py`, including
+   separate `real` and `fake` summaries.
+
+The local runner restores the previous `ENABLE_E2E_DEBUG` value when it exits.
+If the variable was not set before the run, it unsets it.
+
+If `.env` exists, the e2e scripts load it automatically before running. To run
+without loading `.env`, set `E2E_LOAD_ENV=0`:
+
+```bash
+E2E_LOAD_ENV=0 tests/scripts/run_e2e_suite.sh
+```
+
+Useful local filters are passed through to the underlying harness:
+
+```bash
+tests/scripts/run_e2e_suite.sh --country example --kind real
+```
+
+Run all real and fake cases for a country:
+
+```bash
+tests/scripts/run_e2e_suite.sh --country example
+```
+
+Run only the local harness wrapper:
+
+```bash
+tests/scripts/run_e2e_local.sh
+```
+
+Gate an existing report:
+
+```bash
+python tests/scripts/check_e2e_report.py e2e_runs/local/<timestamp>/results.json
+```
+
+By default, the report gate fails when:
+
+- Any e2e case fails.
+- Any classified case is missing a structured tool verdict.
+- Any case is classified as `UNKNOWN`.
+- Any false positive is reported.
+
+Optional thresholds:
+
+```bash
+python tests/scripts/check_e2e_report.py e2e_runs/local/<timestamp>/results.json \
+  --max-unknown 0 \
+  --max-fp 0 \
+  --max-fn 1 \
+  --min-accuracy 0.95
+```
+
+Remote non-production smoke tests require a deployed service URL:
+
+```bash
+BASE_URL=https://example.run.app WEBHOOK_SECRET=... tests/scripts/run_e2e_remote.sh
+```
+
+Remote structured verdicts require `ENABLE_E2E_DEBUG=true` on the deployed
+service. Remote media cases also need a pre-existing Meta media ID in each
+case's `expected.json`; local certificate files are not uploaded in remote mode.
+
+Do not commit real certificates or real-person narratives as e2e fixtures.
+
+---
+
 ## Contributing
 
 We are actively looking for contributors to own MVP components.
