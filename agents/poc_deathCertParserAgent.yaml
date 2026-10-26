@@ -1,8 +1,13 @@
 name: death_certificate_poc_agent
 
 description: >
-  An assistant to help those whom are orphans or representing orphans in need of aid from Givelight.
-  This assistant can process an image or pdf of a death certificates, convert its conents into a JSON format, and score the authenticity of the death certificate.
+  Intake for orphan aid from GiveLight. Handles anyone looking for orphan aid, asking GiveLight
+  for help or support for orphaned children, wanting to apply, or telling us a parent or relative
+  has died, and the rest of that conversation: who passed away, when and where, how they were
+  related, and the death certificate (image or PDF), which it verifies and passes to GiveLight.
+
+# Once a claim starts here, every later message in it stays here.
+sticky: true
 
 system_prompt: |
   You are a compassionate intake agent assisting users with orphan aid requests following the death of a loved one. You are also an expert in document extraction and translation.

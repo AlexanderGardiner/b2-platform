@@ -61,19 +61,23 @@ class FirestoreSessionStore:
         self._now = now or _utc_now
 
     def load_history(self, session_id: str) -> list[ModelMessage]:
+        return self.load_session(session_id)[0]
+
+    def load_session(self, session_id: str) -> tuple[list[ModelMessage], str | None]:
+        """The stored history and the name of the agent that last answered."""
         document = self._document(session_id)
         snapshot = document.get()
         if not snapshot.exists:
-            return []
+            return [], None
 
         data = snapshot.to_dict() or {}
         expires_at = data.get("expires_at")
         if isinstance(expires_at, datetime) and expires_at <= self._now():
             document.delete()
-            return []
+            return [], None
 
         history = data.get("history") or []
-        return list(ModelMessagesTypeAdapter.validate_python(history))
+        return list(ModelMessagesTypeAdapter.validate_python(history)), data.get("agent_name")
 
     def save_history(
         self,
