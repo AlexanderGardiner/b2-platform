@@ -30,9 +30,10 @@ DEFAULT_SESSION_TTL = timedelta(hours=72)
 # image up to this size fits in one document. Larger images are split into
 # pieces of this size.
 MEDIA_CHUNK_BYTES = 700_000
-# Largest image accepted. Matches WhatsApp's photo limit and the 5 MB ceiling of
-# Drive's multipart upload used for the GiveLight handoff: anything bigger would
-# pass verification and then fail to reach GiveLight.
+# Largest image accepted. Matches WhatsApp's photo limit, and stays well under
+# the 20 MB document limit of GiveLight's handoff script
+# (integrations/givelight-drive-automation): anything bigger would pass
+# verification and then never reach GiveLight.
 MAX_MEDIA_BYTES = 5_000_000
 
 
